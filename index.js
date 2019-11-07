@@ -6,18 +6,114 @@ const $ = require('cheerio');
 const puppeteer= require('puppeteer');
 const findpostnummerurl = 'http://www2.postdanmark.dk/findpostnummer/Findpostnummer.do';
 
-
 async function main() {
-	//debugger; input [name=]	
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-  await page.goto(findpostnummerurl);
-  await page.click('input[name="zipcode"]');
-  await page.keyboard.type('3450');
-  await page.click('input[value="Søg"]');
 
-  await browser.close();
+	let firmapostnumre = ['0800', '0999', '1092', '1093', '1095', '1098', '1140', '1147', '1148', '1217', '1448', '1566', '1592', '1599', '1630', '1780', '1785', '1786', '1787']
+	//debugger; input [name=]	
+	require('events').EventEmitter.defaultMaxListeners = 75;
+  firmapostnumre.forEach(async function(postnr) {
+  	try {
+			const browser = await puppeteer.launch();
+		  //console.log(browser);
+		  let page = await browser.newPage();
+		  //console.log(page);
+		  await page.goto(findpostnummerurl);
+		  await page.click('input[name="zipcode"]');
+		  await page.keyboard.type(postnr);
+		  await page.click('input[value="Søg"]');
+		  //await page.waitForNavigation();
+		  let html= await page.content();
+		  //console.log(html);
+
+			let husnummerintevaller= $('#pdkTable > tbody > tr', html);
+			console.log(husnummerintevaller.length);
+			//console.log(husnummerintevaller);
+			let linje= /^([A-ZÆØÅa-zæøå ]+) ([0-9][A-ZÆØÅ0-9\-, ]*)/;
+			husnummerintevaller.each(function(i, elem) {
+				//console.log(elem);
+				let kolonner= $('td', elem);
+				// console.log(kolonner);
+				// console.log(kolonner[2].children[0]);
+				let gadeoghusnumre= kolonner[2].children[0].data.trim();
+				let firma= kolonner[4].children[0].data.trim();
+				let postdistrikt= kolonner[1].children[0].data.trim();
+				console.log(firma + ', ' + gadeoghusnumre + ', ' + postdistrikt + ', ' + postnr);
+				let result= linje.exec(gadeoghusnumre);
+				if (result) {
+					let vejnavn= result[1].trim();
+					let husnumre= result[2].trim();
+					console.log('vejnavn: ' + vejnavn + ', husnumre: ' + husnumre);
+				}
+				else {			
+					console.log(gadeoghusnumre);
+				}
+
+			});
+
+			await browser.close();
+
+	  }
+	  catch(e) {
+	  	console.log('problemer med posrnummer: ' + postnr + ' - ' + e)
+	  }
+
+	});
+
+
 }
+
+// async function main() {
+
+// 	let firmapostnumre = ['0800', '0999', '1092', '1093', '1095', '1098', '1140', '1147', '1148', '1217', '1218', '1448', '1566', '1592', '1599', '1630', '1780', '1785', '1786', '1787']
+// 	//debugger; input [name=]	
+// 	require('events').EventEmitter.defaultMaxListeners = 25;
+//   firmapostnumre.forEach(async function(postnr) {
+// 		const browser = await puppeteer.launch();
+// 	  //console.log(browser);
+// 	  let page = await browser.newPage();
+// 	  //console.log(page);
+// 	  await page.goto(findpostnummerurl);
+// 	  await page.click('input[name="zipcode"]');
+// 	  await page.keyboard.type(postnr);
+// 	  await page.click('input[value="Søg"]');
+// 	  //await page.waitForNavigation();
+// 	  let html= await page.content();
+// 	  //console.log(html);
+
+// 		let firmaer= $('#pdkTable > tbody > tr > td:nth-child(5)', html);
+// 		for (let i = 0; i<firmaer.length; i++) {
+// 			firmaer[i]= firmaer[i].children[0].data.trim();
+// 			console.log(firmaer[i]);
+// 		};
+
+// 		let postdistrikter= $('#pdkTable > tbody > tr > td:nth-child(2)', html);
+// 		for (let i = 0; i<postdistrikter.length; i++) {
+// 			postdistrikter[i]= postdistrikter[i].children[0].data.trim();
+// 			console.log(postdistrikter[i]);
+// 		};
+
+// 		let husnummerintevaller= $('#pdkTable > tbody > tr > td:nth-child(3)', html);
+// 		console.log(husnummerintevaller.length);
+// 		let linje= /^([A-ZÆØÅa-zæøå ]+) ([0-9][A-ZÆØÅ0-9\-, ]*)/;
+// 		for (let i = 0; i<husnummerintevaller.length; i++) {
+// 			let tekst= husnummerintevaller[i].children[0].data.trim();
+// 			let result= linje.exec(tekst);
+// 			if (result) {
+// 				let vejnavn= result[1].trim();
+// 				let husnumre= result[2].trim();
+// 				console.log('vejnavn: ' + vejnavn + ', husnumre: ' + husnumre);
+// 			}
+// 			else {			
+// 				console.log(tekst);
+// 			}
+
+// 		};
+
+//   	await browser.close();
+
+// 	});
+
+// }
 
 // async function main() {
 // 	//debugger;
