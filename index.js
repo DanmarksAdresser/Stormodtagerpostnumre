@@ -11,7 +11,14 @@ async function main() {
 	let firmapostnumre = ['0800', '0999', '1092', '1093', '1095', '1098', '1140', '1147', '1148', '1217', '1448', '1566', '1592', '1599', '1630', '1780', '1785', '1786', '1787']
 	//debugger; input [name=]	
 	require('events').EventEmitter.defaultMaxListeners = 75;
-  firmapostnumre.forEach(async function(postnr) {
+  for (let i= 0; i<firmapostnumre.length; i++) {
+  	await danfirmapostnummeradresser(firmapostnumre[i]);
+	};
+
+
+}
+
+async function danfirmapostnummeradresser(postnr) {
   	try {
 			const browser = await puppeteer.launch();
 		  //console.log(browser);
@@ -21,11 +28,11 @@ async function main() {
 		  await page.click('input[name="zipcode"]');
 		  await page.keyboard.type(postnr);
 		  await page.click('input[value="Søg"]');
-		  //await page.waitForNavigation();
 		  let html= await page.content();
 		  //console.log(html);
 
 			let husnummerintevaller= $('#pdkTable > tbody > tr', html);
+  		console.log(postnr);
 			console.log(husnummerintevaller.length);
 			//console.log(husnummerintevaller);
 			let linje= /^([A-ZÆØÅa-zæøå ]+) ([0-9][A-ZÆØÅ0-9\-, ]*)/;
@@ -37,12 +44,25 @@ async function main() {
 				let gadeoghusnumre= kolonner[2].children[0].data.trim();
 				let firma= kolonner[4].children[0].data.trim();
 				let postdistrikt= kolonner[1].children[0].data.trim();
-				console.log(firma + ', ' + gadeoghusnumre + ', ' + postdistrikt + ', ' + postnr);
+				// console.log(firma + ', ' + gadeoghusnumre + ', ' + postdistrikt + ', ' + postnr);
 				let result= linje.exec(gadeoghusnumre);
 				if (result) {
 					let vejnavn= result[1].trim();
-					let husnumre= result[2].trim();
-					console.log('vejnavn: ' + vejnavn + ', husnumre: ' + husnumre);
+					let husnumretekst= result[2].trim();
+					console.log('vejnavn: ' + vejnavn + ', husnumre: ' + husnumretekst);
+					let husnumre= husnumretekst.split(',');
+					for (let i= 0;i<husnumre.length; i++) {
+						husnumre[i]= husnumre[i].trim();
+						let interval= husnumre[i].split('-');
+						if (interval.length > 1) {
+							husnumre[i]= interval[0];
+							for (let nr= parseInt(interval[0])+1; nr<=parseInt(interval[1]); nr++) {
+								husnumre.push(interval[1]);
+							}
+						}
+						let adresse= vejnavn + ' ' + husnumre[i] + ', ' + postdistrikt + ' (' + firma + ')';
+						console.log(adresse);
+					}
 				}
 				else {			
 					console.log(gadeoghusnumre);
@@ -56,11 +76,7 @@ async function main() {
 	  catch(e) {
 	  	console.log('problemer med posrnummer: ' + postnr + ' - ' + e)
 	  }
-
-	});
-
-
-}
+	}
 
 // async function main() {
 
