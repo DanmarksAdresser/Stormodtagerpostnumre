@@ -11,6 +11,7 @@ async function main() {
 	let firmapostnumre = ['0800', '0999', '1092', '1093', '1095', '1098', '1140', '1147', '1148', '1217', '1448', '1566', '1592', '1599', '1630', '1780', '1785', '1786', '1787']
 	//debugger; input [name=]	
 	require('events').EventEmitter.defaultMaxListeners = 75;
+	console.log('Firma;Gadeadresse;Postnr;Firmapostnr;Bynavn;Adgangsadresseid;Bemærkninger');
   for (let i= 0; i<firmapostnumre.length; i++) {
   	await danfirmapostnummeradresser(firmapostnumre[i]);
 	};
@@ -32,13 +33,14 @@ async function danfirmapostnummeradresser(postnr) {
 		  //console.log(html);
 
 			let husnummerintevaller= $('#pdkTable > tbody > tr', html);
-  		console.log(postnr);
-			console.log(husnummerintevaller.length);
+  		//console.log(postnr);
+			//console.log(husnummerintevaller.length);
 			//console.log(husnummerintevaller);
 			let linje= /^([A-ZÆØÅa-zæøå ]+) ([0-9][A-ZÆØÅ0-9\-, ]*)/;
-			husnummerintevaller.each(function(i, elem) {
+			//husnummerintevaller.each(async function(i, elem) {
+			for (let i= 0; i<husnummerintevaller.length; i++) {
 				//console.log(elem);
-				let kolonner= $('td', elem);
+				let kolonner= $('td', husnummerintevaller[i]);
 				// console.log(kolonner);
 				// console.log(kolonner[2].children[0]);
 				let gadeoghusnumre= kolonner[2].children[0].data.trim();
@@ -49,7 +51,7 @@ async function danfirmapostnummeradresser(postnr) {
 				if (result) {
 					let vejnavn= result[1].trim();
 					let husnumretekst= result[2].trim();
-					console.log('vejnavn: ' + vejnavn + ', husnumre: ' + husnumretekst);
+					//console.log('vejnavn: ' + vejnavn + ', husnumre: ' + husnumretekst);
 					let husnumre= husnumretekst.split(',');
 					for (let i= 0;i<husnumre.length; i++) {
 						husnumre[i]= husnumre[i].trim();
@@ -61,20 +63,41 @@ async function danfirmapostnummeradresser(postnr) {
 							}
 						}
 						let adresse= vejnavn + ' ' + husnumre[i] + ', ' + postdistrikt + ' (' + firma + ')';
-						console.log(adresse);
+						let options= {};
+						options.uri= "https://dawa.aws.dk/adgangsadresser";
+						options.qs= {};
+						options.qs.vejnavn= vejnavn;
+						options.qs.husnr= husnumre[i];
+						options.qs.struktur= 'mini';
+    				options.json = true;
+						let fundne= await rp(options);
+						//console.log('IsArray: ' + Array.isArray(fundne));
+						let bynavn= postdistrikt;
+						if (vejnavn === 'Girostrøget' && husnumre[i]==='1' && postdistrikt==='Høje Taastrup') {bynavn= 'Taastrup'}
+						else if (vejnavn === 'Emil Holms Kanal' && husnumre[i]==='20' && postdistrikt==='København C') {bynavn= 'København S'}
+						else if (vejnavn === 'Frederikskaj' &&postdistrikt==='København V') {bynavn= 'København SV'}
+						let found = fundne.find(function(element) {
+						  return element.postnrnavn === bynavn;
+						});
+						if (found) {
+							console.log(firma + ';' + vejnavn + ' ' + husnumre[i] + ';' + found.postnr + ';' + postnr + ';' + postdistrikt +  ';' + found.id +  ';' );
+						}
+						else {							
+							//console.log(adresse);
+						}
 					}
 				}
 				else {			
 					console.log(gadeoghusnumre);
 				}
 
-			});
+			};
 
 			await browser.close();
 
 	  }
 	  catch(e) {
-	  	console.log('problemer med posrnummer: ' + postnr + ' - ' + e)
+	  	console.log('problemer med postnummer: ' + postnr + ' - ' + e)
 	  }
 	}
 
